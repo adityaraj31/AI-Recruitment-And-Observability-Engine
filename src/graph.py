@@ -3,6 +3,8 @@ from langgraph.graph import StateGraph, END
 from src.utils.ocr import extract_text_from_file
 from src.agents.resume_parser import parse_resume
 from src.agents.jd_parser import parse_jd
+from src.agents.optimist import get_optimist_opinion
+from src.agents.skeptic import get_skeptic_opinion
 from src.agents.ranker import rank_candidate
 from src.utils.logger import setup_logger
 
@@ -23,6 +25,10 @@ class RecruitmentState(TypedDict):
     resume_data: Optional[Dict]
     jd_data: Optional[Dict]
     
+    # Opinions (Debate Node)
+    optimist_opinion: Optional[str]
+    skeptic_opinion: Optional[str]
+    
     # Output
     analysis: Optional[Dict]
     error: Optional[str]
@@ -31,7 +37,6 @@ class RecruitmentState(TypedDict):
 def ingest_resume(state: RecruitmentState):
     logger.info("Node: Ingest Resume")
     try:
-        # Prioritize File Bytes if available
         if state.get("resume_file_bytes"):
             text = extract_text_from_file(state["resume_file_bytes"], state.get("resume_filename", "resume.txt"))
             if text.startswith("Error:"):
@@ -39,7 +44,6 @@ def ingest_resume(state: RecruitmentState):
             logger.info(f"Ingested resume from file. Length: {len(text)}")
             return {"resume_text": text}
         
-        # Fallback to direct text input, but ignore Swagger placeholder "string"
         text_input = state.get("resume_text")
         if text_input and text_input.strip() and text_input.lower() != "string":
             logger.info(f"Ingested resume from text input. Length: {len(text_input)}")
@@ -53,7 +57,6 @@ def ingest_resume(state: RecruitmentState):
 def ingest_jd(state: RecruitmentState):
     logger.info("Node: Ingest JD")
     try:
-        # Prioritize File Bytes if available
         if state.get("jd_file_bytes"):
             text = extract_text_from_file(state["jd_file_bytes"], state.get("jd_filename", "jd.txt"))
             if text.startswith("Error:"):
@@ -61,7 +64,6 @@ def ingest_jd(state: RecruitmentState):
             logger.info(f"Ingested JD from file. Length: {len(text)}")
             return {"jd_text": text}
         
-        # Fallback to direct text input
         text_input = state.get("jd_text")
         if text_input and text_input.strip() and text_input.lower() != "string":
             logger.info(f"Ingested JD from text input. Length: {len(text_input)}")
@@ -90,15 +92,35 @@ def parse_jd_node(state: RecruitmentState):
         return {"error": result["error"]}
     return {"jd_data": result}
 
-def rank_node(state: RecruitmentState):
-    logger.info("Node: Rank Candidate")
+def optimist_node(state: RecruitmentState):
+    logger.info("Node: The Optimist")
     if state.get("error"): return None
     
-    result = rank_candidate(state["resume_data"], state["jd_data"])
+    opinion = get_optimist_opinion(state["resume_data"], state["jd_data"])
+    return {"optimist_opinion": opinion}
+
+def skeptic_node(state: RecruitmentState):
+    logger.info("Node: The Skeptic")
+    if state.get("error"): return None
+    
+    opinion = get_skeptic_opinion(state["resume_data"], state["jd_data"])
+    return {"skeptic_opinion": opinion}
+
+def rank_node(state: RecruitmentState):
+    logger.info("Node: Mediator (Final Rank)")
+    if state.get("error"): return None
+    
+    # Wait for both opinions to be present in state
+    result = rank_candidate(
+        state["resume_data"], 
+        state["jd_data"], 
+        state.get("optimist_opinion", ""), 
+        state.get("skeptic_opinion", "")
+    )
+    
     if "error" in result:
         return {"error": result["error"]}
     
-    # Add candidate/job validation info to the final analysis mostly for convenience
     result["candidate_name"] = state["resume_data"].get("name", "Unknown")
     result["job_title"] = state["jd_data"].get("job_title", "Unknown")
     
@@ -111,29 +133,26 @@ workflow.add_node("ingest_resume", ingest_resume)
 workflow.add_node("ingest_jd", ingest_jd)
 workflow.add_node("parse_resume", parse_resume_node)
 workflow.add_node("parse_jd", parse_jd_node)
+workflow.add_node("optimist", optimist_node)
+workflow.add_node("skeptic", skeptic_node)
 workflow.add_node("rank", rank_node)
 
 # Define Edges
-# Start -> Ingest
 workflow.set_entry_point("ingest_resume")
 workflow.set_entry_point("ingest_jd")
 
-# Ingest -> Parse
 workflow.add_edge("ingest_resume", "parse_resume")
 workflow.add_edge("ingest_jd", "parse_jd")
 
-# Parse -> Rank
-# We need both to be ready before ranking. 
-# LangGraph waits for all incoming edges to a node to complete if it's a join point?
-# Actually, standard LangGraph behavior is to run whenever an edge points to it.
-# To wait for both, we usually join them.
-# Simple pattern: Both go to Rank. Rank needs to check if both keys exist in state.
-# However, "Parallel" execution in LangGraph usually implies independent branches.
+# Once both are parsed, start the debate
+workflow.add_edge("parse_resume", "optimist")
+workflow.add_edge("parse_resume", "skeptic")
+workflow.add_edge("parse_jd", "optimist")
+workflow.add_edge("parse_jd", "skeptic")
 
-# Let's link them sequentially or use a join.
-# Join Pattern:
-workflow.add_edge("parse_resume", "rank")
-workflow.add_edge("parse_jd", "rank")
+# Fan-in from debate to mediator
+workflow.add_edge("optimist", "rank")
+workflow.add_edge("skeptic", "rank")
 
 # Compile
 app = workflow.compile()
