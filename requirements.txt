@@ -128,6 +128,12 @@ packaging==26.0
     #   langchain-core
     #   langsmith
     #   marshmallow
+pdf2image==1.17.0
+    # via ai-recruitment-engine (pyproject.toml)
+pillow==12.1.1
+    # via
+    #   ai-recruitment-engine (pyproject.toml)
+    #   pdf2image
 propcache==0.4.1
     # via
     #   aiohttp
@@ -151,6 +157,8 @@ python-dotenv==1.2.1
     # via
     #   ai-recruitment-engine (pyproject.toml)
     #   pydantic-settings
+python-multipart==0.0.22
+    # via ai-recruitment-engine (pyproject.toml)
 pyyaml==6.0.3
     # via
     #   langchain-classic

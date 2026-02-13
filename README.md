@@ -1,70 +1,73 @@
 # AI Recruitment & Observability Engine
 
-An automated talent acquisition pipeline designed to streamline candidate screening using Agentic AI. This project uses LLMs to parse resumes and job descriptions, ranking candidates based on semantic alignment, with full observability provided by LangSmith.
+An automated talent acquisition pipeline designed to streamline candidate screening using Agentic AI. This project uses **LangGraph** to orchestrate a multi-agent workflow that parses resumes/JDs and ranks candidates with full observability via **LangSmith**.
 
 ## Features
 
-- **Resume Parsing**: Extracts structured data (skills, experience, education) from resumes.
-- **Job Description Analysis**: Extracts key requirements and qualifications from JDs.
-- **Candidate Ranking**: Semantically matches candidates to jobs and provides a compatibility score (0-100) with reasoning.
-- **REST API**: FastAPI-based interface for integration.
-- **Observability**: Integrated with LangSmith for tracing, debugging, and monitoring LLM interactions.
+- **Multi-Agent Orchestration**: Managed by LangGraph for parallel ingestion and state-aware processing.
+- **Robust OCR**: Supports parsing text from **PDFs**, **Images (JPG/PNG)**, and **Text** files.
+- **Resume Parsing**: Extracts structured data (skills, experience, education) using Vision-capable LLMs.
+- **Job Description Analysis**: Automatically extracts key requirements and qualifications from job posts.
+- **Candidate Ranking**: Semantically matches candidates to jobs and provides a compatibility score (0-100) with detailed reasoning.
+- **Observability**: full tracing and monitoring of every agent decision in LangSmith.
+- **REST API**: FastAPI-based interface with support for file uploads.
 
 ## Tech Stack
 
-- **Language**: Python
-- **LLM Orchestration**: LangChain & LangGraph
-- **API Framework**: FastAPI
-- **LLM Provider**: OpenAI / OpenRouter
+- **Orchestration**: LangGraph
+- **LLM Framework**: LangChain
+- **Models**: OpenAI (GPT-4o) / OpenRouter (Llama 3.2 Vision, Gemini 2.0 Flash)
+- **API**: FastAPI & Uvicorn
+- **OCR/PDF**: pypdf, pdf2image, pillow
 - **Observability**: LangSmith
-- **Package Management**: uv
+- **Package Manager**: uv
 
 ## Setup & Installation
 
 1. **Clone the repository**:
    ```bash
    git clone https://github.com/adityarajsingh31/ai-recruitment-engine.git
-   cd ai_recruitment_engine
+   cd ai-recruitment-engine
    ```
 
 2. **Install dependencies**:
    ```bash
-   pip install -r requirements.txt
-   # OR if using uv
    uv sync
+   # OR
+   pip install -r requirements.txt
    ```
 
 3. **Configure Environment Variables**:
-   Create a `.env` file in the root directory.
+   Create a `.env` file from `.env.example`:
+   ```bash
+   OPENAI_API_KEY=your_key
+   LANGCHAIN_API_KEY=your_key
+   ```
 
 ## Usage
+
+### API Mode (Recommended)
+Start the server:
+```bash
+uvicorn src.api:app --reload --port 8000
+```
+Access the interactive docs at `http://localhost:8000/docs`. You can upload `.pdf` or `.png` resumes directly to the `/analyze` endpoint.
 
 ### CLI Mode
 ```bash
 python main.py
 ```
 
-### API Mode
-Start the server:
-```bash
-uvicorn src.api:app --reload
-```
-Access docs at `http://localhost:8000/docs`.
-
 ## Project Structure
 
 ```
 ai-recruitment-engine/
 ├── src/
-│   ├── agents/
-│   │   ├── resume_parser.py
-│   │   ├── jd_parser.py
-│   │   └── ranker.py
-│   ├── utils/
-│   │   └── logger.py
-│   ├── api.py
-│   └── main.py
-├── tests/
+│   ├── agents/          # Agent logic (Parser, Ranker)
+│   ├── utils/           # Utilities (OCR, Logger)
+│   ├── graph.py         # LangGraph workflow definition
+│   └── api.py           # FastAPI endpoints
+├── tests/               # API and unit tests
 ├── requirements.txt
 ├── .env
 └── README.md

@@ -3,6 +3,7 @@ import json
 import time
 import subprocess
 import sys
+import os
 
 def test_api():
     # Start the server in a subprocess
@@ -23,13 +24,28 @@ def test_api():
         assert response.json() == {"status": "ok"}
         print("Health check passed!")
 
-        # 2. Analyze Endpoint
-        print("Testing /analyze...")
-        payload = {
-            "resume_text": "John Doe. Skills: Python, Docker.",
-            "job_description_text": "Looking for Python Engineer."
+        # 2. Analyze Endpoint with Files (Mocking files with strings)
+        print("Testing /analyze with form data...")
+        
+        # Create dummy temp files
+        with open("temp_resume.txt", "w") as f:
+            f.write("John Doe. Skills: Python, Docker, LangGraph.")
+        with open("temp_jd.txt", "w") as f:
+            f.write("Looking for Python Engineer with LangGraph experience.")
+
+        files = {
+            'resume_file': ('resume.txt', open('temp_resume.txt', 'rb'), 'text/plain'),
+            'jd_file': ('jd.txt', open('temp_jd.txt', 'rb'), 'text/plain')
         }
-        response = requests.post("http://127.0.0.1:8000/analyze", json=payload)
+        
+        response = requests.post("http://127.0.0.1:8000/analyze", files=files)
+        
+        # Clean up
+        files['resume_file'][1].close()
+        files['jd_file'][1].close()
+        os.remove("temp_resume.txt")
+        os.remove("temp_jd.txt")
+
         if response.status_code == 200:
             print("Analyze endpoint passed!")
             print(json.dumps(response.json(), indent=2))
