@@ -29,43 +29,53 @@ def main():
             jd_text = f.read()
     except FileNotFoundError:
         logger.warning("Sample files not found. Using dummy data.")
-        resume_text = """
-        John Doe
-        Software Engineer
-        Skills: Python, Docker, Kubernetes, LangChain
-        Experience: 4 years working on backend systems and AI agents.
-        """
-        jd_text = """
-        Job Title: Senior Python AI Engineer
-        Requirements:
-        - 3+ years of Python experience
-        - Experience with LLMs and LangChain
-        - Knowledge of Docker and Kubernetes
-        """
+        resume_text = "Dummy Resume"
+        jd_text = "Dummy JD"
 
-    # 1. Parse Resume
-    resume_data = parse_resume(resume_text)
-    if "error" in resume_data:
-        return
-
-    # 2. Parse JD
-    jd_data = parse_jd(jd_text)
-    if "error" in jd_data:
-        return
-
-    # 3. Rank Candidate
-    ranking = rank_candidate(resume_data, jd_data)
+    result = analyze_candidate(resume_text, jd_text)
     
+    if "error" in result:
+        print(f"Error: {result['error']}")
+        return
+
     # Output Result
     print("\n" + "="*50)
     print("RECRUITMENT ENGINE RESULTS")
     print("="*50)
-    print(f"Candidate: {resume_data.get('name', 'Unknown')}")
-    print(f"Job Role: {jd_data.get('job_title', 'Unknown')}")
-    print(f"Match Score: {ranking.get('score')}/100")
-    print(f"Reasoning: {ranking.get('reasoning')}")
-    print(f"Missing Skills: {', '.join(ranking.get('missing_skills', []))}")
+    print(f"Candidate: {result.get('candidate_name', 'Unknown')}")
+    print(f"Job Role: {result.get('job_title', 'Unknown')}")
+    print(f"Match Score: {result.get('score')}/100")
+    print(f"Reasoning: {result.get('reasoning')}")
+    print(f"Missing Skills: {', '.join(result.get('missing_skills', []))}")
     print("="*50 + "\n")
+
+def analyze_candidate(resume_text: str, jd_text: str) -> dict:
+    """
+    Orchestrates the resume parsing, JD parsing, and ranking.
+    Returns a dictionary with the combined results.
+    """
+    # 1. Parse Resume
+    resume_data = parse_resume(resume_text)
+    if "error" in resume_data:
+        return {"error": resume_data["error"]}
+
+    # 2. Parse JD
+    jd_data = parse_jd(jd_text)
+    if "error" in jd_data:
+        return {"error": jd_data["error"]}
+
+    # 3. Rank Candidate
+    ranking = rank_candidate(resume_data, jd_data)
+    if "error" in ranking:
+         return {"error": ranking["error"]}
+    
+    return {
+        "candidate_name": resume_data.get("name"),
+        "job_title": jd_data.get("job_title"),
+        "score": ranking.get("score"),
+        "reasoning": ranking.get("reasoning"),
+        "missing_skills": ranking.get("missing_skills")
+    }
 
 if __name__ == "__main__":
     main()

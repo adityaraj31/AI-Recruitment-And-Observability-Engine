@@ -6,13 +6,15 @@ An automated talent acquisition pipeline designed to streamline candidate screen
 
 - **Resume Parsing**: Extracts structured data (skills, experience, education) from resumes.
 - **Job Description Analysis**: Extracts key requirements and qualifications from JDs.
-- **Candidate Ranking**: semantically matches candidates to jobs and provides a compatibility score (0-100) with reasoning.
+- **Candidate Ranking**: Semantically matches candidates to jobs and provides a compatibility score (0-100) with reasoning.
+- **REST API**: FastAPI-based interface for integration.
 - **Observability**: Integrated with LangSmith for tracing, debugging, and monitoring LLM interactions.
 
 ## Tech Stack
 
 - **Language**: Python
-- **LLM Orchestration**: LangChain
+- **LLM Orchestration**: LangChain & LangGraph
+- **API Framework**: FastAPI
 - **LLM Provider**: OpenAI / OpenRouter
 - **Observability**: LangSmith
 - **Package Management**: uv
@@ -33,29 +35,21 @@ An automated talent acquisition pipeline designed to streamline candidate screen
    ```
 
 3. **Configure Environment Variables**:
-   Create a `.env` file in the root directory (see `.env.example`):
-   ```
-   OPENAI_API_KEY=sk-...
-   OPENAI_API_BASE=https://openrouter.ai/api/v1  # If using OpenRouter
-   LANGCHAIN_TRACING_V2=true
-   LANGCHAIN_ENDPOINT="https://api.smith.langchain.com"
-   LANGCHAIN_API_KEY=lsv2-...
-   LANGCHAIN_PROJECT="ai-recruitment-engine"
-   ```
+   Create a `.env` file in the root directory.
 
 ## Usage
 
-1. **Prepare Data**:
-   Place your resume text in `resume.txt` and job description in `job_description.txt` in the root directory.
+### CLI Mode
+```bash
+python main.py
+```
 
-2. **Run the Engine**:
-   ```bash
-   python -m src.main
-   ```
-
-3. **View Results**:
-   The application will output the extracted data and the ranking score to the console.
-   Check your LangSmith dashboard to see the full trace of the reasoning process.
+### API Mode
+Start the server:
+```bash
+uvicorn src.api:app --reload
+```
+Access docs at `http://localhost:8000/docs`.
 
 ## Project Structure
 
@@ -68,7 +62,9 @@ ai-recruitment-engine/
 │   │   └── ranker.py
 │   ├── utils/
 │   │   └── logger.py
+│   ├── api.py
 │   └── main.py
+├── tests/
 ├── requirements.txt
 ├── .env
 └── README.md
